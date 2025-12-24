@@ -1,9 +1,11 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Mic, Building2, Palette, LogOut } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,7 +15,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Building2, Palette, LogOut } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 export default function DashboardPage() {
@@ -25,6 +26,7 @@ export default function DashboardPage() {
   const [businessData, setBusinessData] = useState<any>(null)
   const [showCompanyDetails, setShowCompanyDetails] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
@@ -90,6 +92,53 @@ export default function DashboardPage() {
       .slice(0, 2)
   }
 
+  const handleStartSession = async () => {
+    try {
+      setIsLoading(true)
+
+      // Generate UNIQUE room name with timestamp and random ID
+      const timestamp = Date.now()
+      const randomId = Math.random().toString(36).substring(2, 9)
+      const uniqueRoomName = `user_session_${timestamp}_${randomId}`
+
+      console.log("🎯 Creating unique room:", uniqueRoomName)
+
+      // Call API with unique room name
+      const response = await fetch("/api/livekit/token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          roomName: uniqueRoomName, // Pass unique room name
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to create session")
+      }
+
+      const data = await response.json()
+
+      console.log("✅ Session created:", {
+        roomName: uniqueRoomName,
+        session_id: data.session_id,
+      })
+
+      // Navigate to assistant page
+      router.push(
+        `/assistant?token=${encodeURIComponent(data.token)}&url=${encodeURIComponent(
+          data.url
+        )}&session_id=${data.session_id}`
+      )
+    } catch (error) {
+      console.error("❌ Error starting session:", error)
+      alert("Failed to start session. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -107,7 +156,6 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">{error}</p>
-            <p className="text-sm">Please check your Supabase configuration and ensure your project is active.</p>
             <button
               onClick={() => router.push("/")}
               className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm"
@@ -125,7 +173,6 @@ export default function DashboardPage() {
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 h-14 flex items-center justify-between">
           <h1 className="text-lg font-semibold">Quotify</h1>
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-2 rounded-full hover:opacity-80 transition-opacity">
@@ -144,20 +191,20 @@ export default function DashboardPage() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setShowCompanyDetails(!showCompanyDetails)} className="text-sm">
+              <DropdownMenuItem onClick={() => setShowCompanyDetails(!showCompanyDetails)}>
                 <Building2 className="mr-2 h-3.5 w-3.5" />
                 {showCompanyDetails ? "Hide" : "View"} Company Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/settings/company")} className="text-sm">
+              <DropdownMenuItem onClick={() => router.push("/settings/company")}>
                 <Building2 className="mr-2 h-3.5 w-3.5" />
                 Edit Company
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/onboarding/template")} className="text-sm">
+              <DropdownMenuItem onClick={() => router.push("/onboarding/template")}>
                 <Palette className="mr-2 h-3.5 w-3.5" />
                 Edit Template
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive text-sm">
+              <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
                 <LogOut className="mr-2 h-3.5 w-3.5" />
                 Sign Out
               </DropdownMenuItem>
@@ -193,70 +240,43 @@ export default function DashboardPage() {
                     <p className="text-xs font-medium text-muted-foreground">Contact Person</p>
                     <p className="text-sm">{profile.full_name}</p>
                   </div>
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Email</p>
-                    <p className="text-sm">{businessData?.email || user?.email}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Phone</p>
-                    <p className="text-sm">{businessData?.phone || "Not set"}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-xs font-medium text-muted-foreground">Address</p>
-                    <p className="text-sm">
-                      {businessData?.address
-                        ? `${businessData.address.street}, ${businessData.address.city}, ${businessData.address.state} ${businessData.address.postalCode}`
-                        : "Not set"}
-                    </p>
-                  </div>
-                  {businessData?.website && (
-                    <div className="col-span-2">
-                      <p className="text-xs font-medium text-muted-foreground">Website</p>
-                      <p className="text-sm">{businessData.website}</p>
-                    </div>
-                  )}
-                  {businessData?.tax?.gst && (
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground">GST</p>
-                      <p className="text-sm">{businessData.tax.gst}</p>
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>
           )}
 
           <div className="grid gap-4 sm:grid-cols-3">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">Total Quotes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">0</div>
-                <p className="text-xs text-muted-foreground mt-1">Start creating your first quote</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">Draft Quotes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">0</div>
-                <p className="text-xs text-muted-foreground mt-1">No drafts yet</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">Sent Quotes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">0</div>
-                <p className="text-xs text-muted-foreground mt-1">No sent quotes</p>
-              </CardContent>
-            </Card>
+            <StatCard title="Total Quotes" value="0" description="Start creating your first quote" />
+            <StatCard title="Draft Quotes" value="0" description="No drafts yet" />
+            <StatCard title="Sent Quotes" value="0" description="No sent quotes" />
+          </div>
+
+          <div className="flex justify-center mt-8">
+            <button
+              onClick={handleStartSession}
+              disabled={isLoading}
+              className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-primary text-primary-foreground text-base font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all disabled:opacity-50"
+            >
+              <Mic className={`w-5 h-5 ${isLoading ? 'animate-pulse' : ''}`} />
+              <span>{isLoading ? "Connecting to AI..." : "Start AI Quotation"}</span>
+            </button>
           </div>
         </div>
       </div>
     </div>
+  )
+}
+
+function StatCard({ title, value, description }: { title: string, value: string, description: string }) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-xs font-medium text-muted-foreground">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+        <p className="text-xs text-muted-foreground mt-1">{description}</p>
+      </CardContent>
+    </Card>
   )
 }
