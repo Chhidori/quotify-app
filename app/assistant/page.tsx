@@ -45,6 +45,8 @@ interface Quotation {
 // Quotation Display Component
 function QuotationDisplay() {
   const [quotation, setQuotation] = useState<Quotation | null>(null);
+  const [customerName, setCustomerName] = useState<string>("");
+  const [isEditingCustomer, setIsEditingCustomer] = useState(false);
   const room = useRoomContext();
 
   useEffect(() => {
@@ -81,9 +83,11 @@ function QuotationDisplay() {
             // Update state
             if (newQuotation.items?.length > 0 || newQuotation.customer) {
               setQuotation(newQuotation);
+              setCustomerName(newQuotation.customer || "Voice Customer");
               console.log("Quotation updated successfully via RPC");
             } else {
               setQuotation(null);
+              setCustomerName("");
               console.log("Quotation cleared via RPC");
             }
           }
@@ -104,6 +108,83 @@ function QuotationDisplay() {
       handleQuotationRPC
     );
     console.log("RPC method registered");
+
+    // RPC Handler for saving quotation to database
+    const handleSaveQuotationRPC = async (data: any) => {
+      try {
+        console.log("=".repeat(80));
+        console.log("🔵 saveQuotation RPC received");
+        console.log("Payload:", data.payload);
+        
+        const request = JSON.parse(data.payload);
+        console.log("Parsed request:", request);
+        
+        if (request.type === "save_quotation") {
+          console.log("Processing save quotation request");
+          
+          // Extract the entire data object
+          const quotationData = request.data;
+          
+          console.log("📤 Sending to server API...");
+          console.log("  - Customer:", quotationData.customer);
+          console.log("  - Items:", quotationData.quotation_data?.length);
+          console.log("  - Total:", quotationData.total_amount);
+          
+          // Call server API to save to database - send the entire data object
+          const response = await fetch("/api/quotations", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(quotationData),
+          });
+          
+          const result = await response.json();
+          console.log("📥 Server response:", result);
+          
+          if (result.status === "success") {
+            console.log("✅ QUOTATION SAVED TO DATABASE");
+            console.log("  - Quotation ID:", result.quotation_id);
+            console.log("=".repeat(80));
+            
+            // Return success response to agent
+            return JSON.stringify({
+              status: "success",
+              message: "Quotation saved successfully",
+              quotation_id: result.quotation_id,
+              total_amount: result.total_amount,
+            });
+          } else {
+            console.error("❌ Server returned error:", result.message);
+            return JSON.stringify({
+              status: "error",
+              message: result.message || "Failed to save quotation",
+            });
+          }
+        }
+        
+        return JSON.stringify({ 
+          status: "error", 
+          message: "Invalid request type" 
+        });
+        
+      } catch (err) {
+        console.error("❌ Error handling saveQuotation RPC:", err);
+        console.error("=".repeat(80));
+        return JSON.stringify({
+          status: "error",
+          message: `Failed to save quotation: ${err}`,
+        });
+      }
+    };
+
+    // Register saveQuotation RPC method
+    console.log("Registering RPC method: saveQuotation");
+    const unregisterSave = room.localParticipant.registerRpcMethod(
+      "saveQuotation",
+      handleSaveQuotationRPC
+    );
+    console.log("saveQuotation RPC method registered");
 
     // Data Channel Handler (fallback)
     const handleDataReceived = (
@@ -132,9 +213,11 @@ function QuotationDisplay() {
             
             if (newQuotation.items?.length > 0 || newQuotation.customer) {
               setQuotation(newQuotation);
+              setCustomerName(newQuotation.customer || "Voice Customer");
               console.log("Quotation updated successfully via data channel");
             } else {
               setQuotation(null);
+              setCustomerName("");
               console.log("Quotation cleared via data channel");
             }
           }
@@ -179,11 +262,29 @@ function QuotationDisplay() {
       if (typeof unregister === 'function') {
         unregister();
       }
+      if (typeof unregisterSave === 'function') {
+        unregisterSave();
+      }
       room.localParticipant?.off("dataReceived", handleDataReceived);
       document.removeEventListener('click', handleUserInteraction);
       document.removeEventListener('keypress', handleUserInteraction);
     };
   }, [room]);
+
+  const handleCustomerNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCustomerName(e.target.value);
+  };
+
+  const handleCustomerNameBlur = () => {
+    setIsEditingCustomer(false);
+    // Update the quotation with new customer name
+    if (quotation) {
+      setQuotation({
+        ...quotation,
+        customer: customerName || "Voice Customer"
+      });
+    }
+  };
 
   if (!quotation) {
     return (
@@ -207,10 +308,33 @@ function QuotationDisplay() {
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold text-gray-800">Quotation</h2>
         <div className="text-right">
-          <p className="text-xs text-gray-500">Customer</p>
-          <p className="text-sm font-medium text-gray-800">
-            {quotation.customer || "Voice Customer"}
-          </p>
+          <p className="text-xs text-gray-500 mb-1">Customer Name</p>
+          {isEditingCustomer ? (
+            <input
+              type="text"
+              value={customerName}
+              onChange={handleCustomerNameChange}
+              onBlur={handleCustomerNameBlur}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleCustomerNameBlur();
+                }
+              }}
+              autoFocus
+              className="text-sm font-medium text-gray-800 border-b-2 border-blue-500 focus:outline-none px-2 py-1"
+              placeholder="Enter customer name"
+            />
+          ) : (
+            <button
+              onClick={() => setIsEditingCustomer(true)}
+              className="text-sm font-medium text-gray-800 hover:text-blue-600 transition-colors px-2 py-1 rounded hover:bg-blue-50"
+            >
+              {customerName || "Voice Customer"}
+              <svg className="inline-block w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
@@ -242,10 +366,10 @@ function QuotationDisplay() {
                   {item.qty}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-right">
-                  ¥{item.rate.toFixed(2)}
+                  ₹{item.rate.toFixed(2)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
-                  ¥{item.subtotal.toFixed(2)}
+                  ₹{item.subtotal.toFixed(2)}
                 </td>
               </tr>
             ))}
@@ -260,7 +384,7 @@ function QuotationDisplay() {
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-right">
                 <span className="text-lg font-bold text-blue-600">
-                  ¥{quotation.total.toFixed(2)}
+                  ₹{quotation.total.toFixed(2)}
                 </span>
               </td>
             </tr>

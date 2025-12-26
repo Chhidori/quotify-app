@@ -1,26 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AccessToken } from "livekit-server-sdk";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await getSupabaseServerClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    console.log("Authenticated user:", JSON.stringify(user, null, 2));
-
-    const { data: template } = await supabase
-      .from("quotation_templates")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
-    console.log("Template:", JSON.stringify(template, null, 2));
-
+    // Generate unique room name
     const body = await request.json();
     const roomName =
       body.roomName ||
@@ -28,8 +12,7 @@ export async function POST(request: NextRequest) {
         .toString(36)
         .substring(2, 9)}`;
 
-    console.log("Creating room:", roomName);
-
+    // Validate LiveKit credentials
     const apiKey = process.env.LIVEKIT_API_KEY;
     const apiSecret = process.env.LIVEKIT_API_SECRET;
     const wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
@@ -38,16 +21,13 @@ export async function POST(request: NextRequest) {
       throw new Error("Server misconfigured: missing LiveKit credentials");
     }
 
-    // Create access token for THIS specific room
+    // Create access token
     const token = new AccessToken(apiKey, apiSecret, {
-      identity: roomName, // Use room name as identity
-      metadata: JSON.stringify({
-        userId: user.id,
-        templateId: template?.id || null,
-      }),
+      identity: `user_${Date.now()}`, // Simple unique identity
       ttl: "10h",
     });
 
+    // Grant room permissions
     token.addGrant({
       room: roomName,
       roomJoin: true,
@@ -58,13 +38,12 @@ export async function POST(request: NextRequest) {
 
     const jwt = await token.toJwt();
 
-    console.log("Token created for room:", roomName);
-
     return NextResponse.json({
       url: wsUrl,
       token: jwt,
       session_id: roomName,
     });
+    
   } catch (error: any) {
     console.error("Error creating room:", error);
     return NextResponse.json(
