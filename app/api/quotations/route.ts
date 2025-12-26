@@ -28,11 +28,26 @@ export async function POST(request: NextRequest) {
 
     console.log("Saving quotation for user:", user.id);
 
+    // Get user's organization ID
+    const { data: orgUserData, error: orgUserError } = await supabase
+      .from("organization_users")
+      .select("organization_id")
+      .eq("user_id", user.id)
+      .single();
+
+    if (orgUserError || !orgUserData) {
+      console.error("Error fetching organization:", orgUserError);
+      return NextResponse.json(
+        { status: "error", message: "Organization not found" },
+        { status: 404 }
+      );
+    }
+
     // Get template_id from quotation_templates table
     const { data: templateData, error: templateError } = await supabase
       .from("quotation_templates")
       .select("id")
-      .eq("user_id", user.id)
+      .eq("organization_id", orgUserData.organization_id)
       .single();
 
     if (templateError) {
@@ -57,6 +72,7 @@ export async function POST(request: NextRequest) {
       .from("quotations")
       .insert({
         user_id: user.id,
+        organization_id: orgUserData.organization_id,
         template_id: templateData.id,
         quotation_data: body, // Store the entire data object
       })

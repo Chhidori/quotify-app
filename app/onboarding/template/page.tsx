@@ -115,24 +115,37 @@ export default function TemplateCustomizationPage() {
         return
       }
 
-      const { data: profile } = await supabase.from("business_profiles").select("*").eq("id", user.id).single()
+      // Get user's organization
+      const { data: orgUserData } = await supabase
+        .from("organization_users")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .single()
 
-      if (profile) {
-        const businessData = profile.business_data || {}
+      if (!orgUserData) return
+
+      const { data: org } = await supabase
+        .from("organizations")
+        .select("*")
+        .eq("id", orgUserData.organization_id)
+        .single()
+
+      if (org) {
+        const orgData = org.org_data || {}
         setCompanyData({
-          name: businessData.name || profile.full_name || "Your Company",
-          email: businessData.email || user.email || "",
-          phone: businessData.phone || "",
-          address: businessData.address || {
+          name: orgData.companyName || org.name || "Your Company",
+          email: orgData.email || user.email || "",
+          phone: orgData.phone || "",
+          address: orgData.address || {
             line1: "",
             line2: "",
             city: "",
             state: "",
             postalCode: "",
           },
-          logo: businessData.logo || "",
-          gst: businessData.gst || "",
-          website: businessData.website || "",
+          logo: orgData.logo || "",
+          gst: orgData.tax?.gst || "",
+          website: orgData.website || "",
         })
       }
     }
@@ -148,11 +161,19 @@ export default function TemplateCustomizationPage() {
 
       if (!user) return
 
+      // Get user's organization ID
+      const { data: orgUserData } = await supabase
+        .from("organization_users")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .single()
+
+      if (!orgUserData) return
+
       const { data: template } = await supabase
         .from("quotation_templates")
         .select("*")
-        .eq("user_id", user.id)
-        .eq("is_default", true)
+        .eq("organization_id", orgUserData.organization_id)
         .single()
 
       if (template?.template_data) {
@@ -325,11 +346,21 @@ export default function TemplateCustomizationPage() {
         },
       }
 
+      // Get organization_id from organization_users table
+      const { data: orgUserData, error: orgError } = await supabase
+        .from("organization_users")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .single()
+
+      if (orgError || !orgUserData) {
+        throw new Error("Failed to get organization")
+      }
+
       const { data: existing } = await supabase
         .from("quotation_templates")
         .select("id")
-        .eq("user_id", user.id)
-        .eq("is_default", true)
+        .eq("organization_id", orgUserData.organization_id)
         .single()
 
       let error
@@ -338,16 +369,14 @@ export default function TemplateCustomizationPage() {
           .from("quotation_templates")
           .update({
             template_data: templateData,
-            updated_at: new Date().toISOString(),
           })
           .eq("id", existing.id)
         error = result.error
       } else {
         const result = await supabase.from("quotation_templates").insert([
           {
-            user_id: user.id,
+            organization_id: orgUserData.organization_id,
             template_data: templateData,
-            is_default: true,
           },
         ])
         error = result.error

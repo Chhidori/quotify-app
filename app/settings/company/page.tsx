@@ -49,23 +49,34 @@ export default function EditCompanyPage() {
 
         setUser(user)
 
-        const { data: profile } = await supabase.from("business_profiles").select("*").eq("id", user.id).single()
+        // Get user's organization
+        const { data: orgUserData } = await supabase
+          .from("organization_users")
+          .select("organization_id")
+          .eq("user_id", user.id)
+          .single()
 
-        if (profile) {
-          setFullName(profile.full_name || "")
-          const businessData = profile.business_data || {}
+        if (!orgUserData) {
+          throw new Error("Organization not found")
+        }
 
-          setCompanyName(businessData.companyName || "")
-          setEmail(businessData.email || user.email || "")
-          setPhone(businessData.phone || "")
-          setWebsite(businessData.website || "")
-          setStreet(businessData.address?.street || "")
-          setCity(businessData.address?.city || "")
-          setState(businessData.address?.state || "")
-          setPostalCode(businessData.address?.postalCode || "")
-          setCountry(businessData.address?.country || "")
-          setGst(businessData.tax?.gst || "")
-          setLogoUrl(businessData.logo || "")
+        const { data: org } = await supabase.from("organizations").select("*").eq("id", orgUserData.organization_id).single()
+
+        if (org) {
+          const orgData = org.org_data || {}
+
+          setFullName(orgData.owner_name || "")
+          setCompanyName(orgData.companyName || org.name || "")
+          setEmail(orgData.email || user.email || "")
+          setPhone(orgData.phone || "")
+          setWebsite(orgData.website || "")
+          setStreet(orgData.address?.street || "")
+          setCity(orgData.address?.city || "")
+          setState(orgData.address?.state || "")
+          setPostalCode(orgData.address?.postalCode || "")
+          setCountry(orgData.address?.country || "")
+          setGst(orgData.tax?.gst || "")
+          setLogoUrl(orgData.logo || "")
         }
 
         setLoading(false)
@@ -142,16 +153,29 @@ export default function EditCompanyPage() {
     try {
       const supabase = getSupabaseBrowserClient()
 
-      const { data: existing } = await supabase
-        .from("business_profiles")
-        .select("business_data")
-        .eq("id", user.id)
+      // Get organization_id from organization_users table
+      const { data: orgUser } = await supabase
+        .from("organization_users")
+        .select("organization_id")
+        .eq("user_id", user.id)
         .single()
 
-      const existingBusinessData = existing?.business_data || {}
+      if (!orgUser?.organization_id) {
+        throw new Error("Organization not found")
+      }
+
+      // Get existing data from organizations table
+      const { data: existing } = await supabase
+        .from("organizations")
+        .select("org_data")
+        .eq("id", orgUser.organization_id)
+        .single()
+
+      const existingBusinessData = existing?.org_data || {}
 
       const updatedBusinessData = {
         ...existingBusinessData,
+        owner_name: fullName,
         companyName,
         email,
         phone,
@@ -169,14 +193,14 @@ export default function EditCompanyPage() {
         },
       }
 
+      // Update organizations table
       const { error } = await supabase
-        .from("business_profiles")
+        .from("organizations")
         .update({
-          full_name: fullName,
-          business_data: updatedBusinessData,
-          updated_at: new Date().toISOString(),
+          name: companyName,
+          org_data: updatedBusinessData,
         })
-        .eq("id", user.id)
+        .eq("id", orgUser.organization_id)
 
       if (error) throw error
 
@@ -208,16 +232,16 @@ export default function EditCompanyPage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b">
-        <div className="container mx-auto px-4 h-14 flex items-center gap-4">
+        <div className="container mx-auto px-3 sm:px-4 h-14 flex items-center gap-2 sm:gap-4">
           <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-lg font-semibold">Edit Company Details</h1>
+          <h1 className="text-base sm:text-lg font-semibold truncate">Edit Company Details</h1>
         </div>
       </header>
 
-      <div className="container mx-auto py-6 px-4">
-        <div className="max-w-2xl mx-auto space-y-6">
+      <div className="container mx-auto py-4 sm:py-6 px-3 sm:px-4">
+        <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
@@ -234,7 +258,7 @@ export default function EditCompanyPage() {
                 <Label htmlFor="logo" className="text-sm">
                   Company Logo
                 </Label>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                   {logoUrl ? (
                     <div className="relative h-16 w-16 rounded border bg-muted flex items-center justify-center overflow-hidden">
                       <img
@@ -251,7 +275,7 @@ export default function EditCompanyPage() {
                       <ImageIcon className="h-6 w-6 text-muted-foreground" />
                     </div>
                   )}
-                  <div className="flex-1">
+                  <div className="flex-1 w-full sm:w-auto">
                     <input
                       id="logo"
                       type="file"
@@ -265,11 +289,12 @@ export default function EditCompanyPage() {
                       size="sm"
                       onClick={() => document.getElementById("logo")?.click()}
                       disabled={logoUploading}
+                      className="w-full sm:w-auto"
                     >
                       <Upload className="mr-2 h-3 w-3" />
                       {logoUploading ? "Uploading..." : "Upload Logo"}
                     </Button>
-                    <p className="text-xs text-muted-foreground mt-1">PNG, JPG up to 2MB</p>
+                    <p className="text-xs text-muted-foreground mt-1.5">PNG, JPG up to 2MB</p>
                   </div>
                 </div>
               </div>
@@ -443,12 +468,12 @@ export default function EditCompanyPage() {
               </div>
 
               {/* Actions */}
-              <div className="flex gap-3 pt-4 border-t">
+              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
                 <Button onClick={handleSave} disabled={saving || !fullName || !companyName} className="flex-1 text-sm">
                   <Save className="mr-2 h-3 w-3" />
                   {saving ? "Saving..." : "Save Changes"}
                 </Button>
-                <Button variant="outline" onClick={() => router.push("/dashboard")} className="text-sm">
+                <Button variant="outline" onClick={() => router.push("/dashboard")} className="text-sm sm:w-auto w-full">
                   Cancel
                 </Button>
               </div>

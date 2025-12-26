@@ -128,14 +128,25 @@ export default function CompanyDetailsPage() {
     try {
       const supabase = getSupabaseBrowserClient()
 
-      // Get existing business data
-      const { data: existing } = await supabase
-        .from("business_profiles")
-        .select("business_data")
-        .eq("id", user.id)
+      // Get user's organization ID
+      const { data: orgUserData } = await supabase
+        .from("organization_users")
+        .select("organization_id")
+        .eq("user_id", user.id)
         .single()
 
-      const existingBusinessData = existing?.business_data || {}
+      if (!orgUserData) {
+        throw new Error("Organization not found")
+      }
+
+      // Get existing organization data
+      const { data: existing } = await supabase
+        .from("organizations")
+        .select("org_data")
+        .eq("id", orgUserData.organization_id)
+        .single()
+
+      const existingBusinessData = existing?.org_data || {}
 
       const updatedBusinessData = {
         ...existingBusinessData,
@@ -157,12 +168,12 @@ export default function CompanyDetailsPage() {
       }
 
       const { error } = await supabase
-        .from("business_profiles")
+        .from("organizations")
         .update({
-          business_data: updatedBusinessData,
-          updated_at: new Date().toISOString(),
+          name: companyName,
+          org_data: updatedBusinessData,
         })
-        .eq("id", user.id)
+        .eq("id", orgUserData.organization_id)
 
       if (error) throw error
 

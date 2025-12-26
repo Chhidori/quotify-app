@@ -58,12 +58,27 @@ export default function SignUpPage() {
         throw new Error("Failed to create user")
       }
 
-      // Create business profile
-      const { error: profileError } = await supabase
-        .from("business_profiles")
-        .insert([{ id: authData.user.id, full_name: fullName }])
+      // Create organization
+      const { data: orgData, error: orgError } = await supabase
+        .from("organizations")
+        .insert([{ 
+          name: fullName + "'s Organization",
+          org_data: { owner_name: fullName }
+        }])
+        .select("id")
+        .single()
 
-      if (profileError) throw profileError
+      if (orgError) throw orgError
+
+      // Link user to organization
+      const { error: orgUserError } = await supabase
+        .from("organization_users")
+        .insert([{ 
+          organization_id: orgData.id, 
+          user_id: authData.user.id 
+        }])
+
+      if (orgUserError) throw orgUserError
 
       toast({
         title: "Account created",

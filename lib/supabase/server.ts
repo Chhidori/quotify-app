@@ -21,3 +21,21 @@ export async function getSupabaseServerClient() {
     },
   })
 }
+
+// Helper function to get user's organization ID (server-side)
+export async function getUserOrganizationId(userId: string) {
+  const supabase = await getSupabaseServerClient()
+  
+  const { data, error } = await supabase
+    .from("organization_users")
+    .select("organization_id")
+    .eq("user_id", userId)
+    .single()
+
+  if (error || !data) {
+    console.error("Error fetching organization:", error)
+    return null
+  }
+
+  return data.organization_id
+}

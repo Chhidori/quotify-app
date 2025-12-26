@@ -24,7 +24,6 @@ export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
   const [businessData, setBusinessData] = useState<any>(null)
-  const [showCompanyDetails, setShowCompanyDetails] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -51,10 +50,23 @@ export default function DashboardPage() {
 
         setUser(user)
 
+        // Get user's organization
+        const { data: orgUserData } = await supabase
+          .from("organization_users")
+          .select("organization_id")
+          .eq("user_id", user.id)
+          .single()
+
+        if (!orgUserData) {
+          setError("Organization not found")
+          setLoading(false)
+          return
+        }
+
         const { data: profileData, error: profileError } = await supabase
-          .from("business_profiles")
+          .from("organizations")
           .select("*")
-          .eq("id", user.id)
+          .eq("id", orgUserData.organization_id)
           .single()
 
         if (profileError) {
@@ -62,7 +74,7 @@ export default function DashboardPage() {
         }
 
         setProfile(profileData)
-        setBusinessData(profileData?.business_data || {})
+        setBusinessData(profileData?.org_data || {})
         setLoading(false)
       } catch (err: any) {
         setError(`Unexpected error: ${err.message}`)
@@ -191,10 +203,6 @@ export default function DashboardPage() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setShowCompanyDetails(!showCompanyDetails)}>
-                <Building2 className="mr-2 h-3.5 w-3.5" />
-                {showCompanyDetails ? "Hide" : "View"} Company Details
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push("/settings/company")}>
                 <Building2 className="mr-2 h-3.5 w-3.5" />
                 Edit Company
@@ -221,29 +229,6 @@ export default function DashboardPage() {
               Your quotation workspace is ready. Start creating professional quotes for your business.
             </p>
           </div>
-
-          {showCompanyDetails && profile && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  Company Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-3">
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Company Name</p>
-                    <p className="text-sm">{businessData?.companyName || "Not set"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Contact Person</p>
-                    <p className="text-sm">{profile.full_name}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           <div className="grid gap-4 sm:grid-cols-3">
             <StatCard title="Total Quotes" value="0" description="Start creating your first quote" />
