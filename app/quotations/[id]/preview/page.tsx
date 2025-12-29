@@ -185,17 +185,40 @@ export default function QuotationPreview() {
       setIsDownloading(true);
       toast({
         title: "Generating PDF",
-        description: "Opening print dialog to save as PDF...",
+        description: "⚠️ In the print dialog, disable 'Headers and footers' for a clean PDF without URLs.",
+        duration: 8000,
       });
     },
     onAfterPrint: async () => {
       setIsDownloading(false);
       toast({
         title: "PDF Ready",
-        description: "Select 'Save as PDF' in the print dialog.",
+        description: "Select 'Save as PDF' as the destination.",
       });
     },
   });
+
+  const handleBack = () => {
+    if (typeof window !== "undefined" && window.opener && !window.opener.closed) {
+      try {
+        // Bring opener (assistant tab) to front without changing its URL or state
+        window.opener.focus();
+        // Optionally signal opener (non-breaking) so it can respond in-app if desired
+        try {
+          window.opener.postMessage({ type: "preview:back" }, window.location.origin);
+        } catch (e) {
+          /* ignore postMessage errors */
+        }
+        // Close this preview tab
+        window.close();
+        return;
+      } catch (e) {
+        console.warn("Could not focus opener:", e);
+      }
+    }
+    // Fallback if no opener: navigate client-side (this will load assistant if safe)
+    router.push("/assistant");
+  };
 
   if (loading) {
     return (
@@ -230,7 +253,7 @@ export default function QuotationPreview() {
           <h2 className="text-xl font-bold text-gray-900 mb-2">Error</h2>
           <p className="text-gray-600 mb-6">{error}</p>
           <button
-            onClick={() => router.back()}
+            onClick={handleBack}
             className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors"
           >
             Go Back
@@ -370,7 +393,7 @@ export default function QuotationPreview() {
       <div className="max-w-4xl mx-auto px-4 mb-6 print:hidden">
         <div className="flex items-center justify-between">
           <button
-            onClick={() => router.back()}
+            onClick={handleBack}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
           >
             <svg
@@ -710,7 +733,7 @@ export default function QuotationPreview() {
       <style jsx global>{`
         @page {
           size: A4;
-          margin: 10mm;
+          margin: 0;
         }
         
         @media print {
@@ -718,11 +741,20 @@ export default function QuotationPreview() {
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
             color-adjust: exact;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          
+          html {
+            margin: 0 !important;
+            padding: 0 !important;
           }
           
           #quotation-content {
             box-shadow: none !important;
             border-radius: 0 !important;
+            margin: 0 !important;
+            padding: 10mm !important;
           }
           
           .print\\:hidden {
@@ -736,3 +768,6 @@ export default function QuotationPreview() {
     </div>
   );
 }
+
+
+// Removed duplicate default export PreviewPage to fix redeclaration error.

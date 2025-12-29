@@ -9,7 +9,7 @@ export async function GET(
     const { id } = await params;
     
     console.log("=".repeat(80));
-    console.log("🔍 Fetching quotation with ID:", id);
+    console.log(" Fetching quotation with ID:", id);
     
     const supabase = await getSupabaseServerClient();
 
