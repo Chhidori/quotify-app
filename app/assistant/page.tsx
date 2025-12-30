@@ -10,6 +10,7 @@ import {
   useRoomContext,
   useLocalParticipant,
 } from "@livekit/components-react";
+import { Mic, MicOff, PhoneOff } from "lucide-react";
 import "@livekit/components-styles";
 
 // Agent states
@@ -480,43 +481,30 @@ function QuotationDisplay() {
   };
 
   if (!quotation) {
-    return (
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6">
-        <h2 className="text-xl font-semibold mb-4 text-gray-800">Quotation</h2>
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
-          <p className="text-gray-500">No quotation yet</p>
-          <p className="text-sm text-gray-400 mt-1">Start speaking to add items</p>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-8 mb-4 sm:mb-6">
       {/* Success Message Banner */}
       {showSuccessMessage && savedQuotationId && (
-        <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="mb-4 sm:mb-6 bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
               <div>
-                <p className="font-semibold text-green-900">Quotation Saved Successfully!</p>
+                <p className="font-semibold text-green-900 text-sm sm:text-base">Quotation Saved Successfully!</p>
               </div>
             </div>
             <button
               onClick={handleViewPreview}
-              className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors"
+              className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm sm:text-base whitespace-nowrap"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
@@ -526,8 +514,8 @@ function QuotationDisplay() {
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-800">Quotation</h2>
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
+        <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Quotation</h2>
         <div className="text-right">
           <p className="text-xs text-gray-500 mb-1">Customer Name</p>
           {isEditingCustomer ? (
@@ -542,13 +530,13 @@ function QuotationDisplay() {
                 }
               }}
               autoFocus
-              className="text-sm font-medium text-gray-800 border-b-2 border-blue-500 focus:outline-none px-2 py-1"
+              className="text-xs sm:text-sm font-medium text-gray-800 border-b-2 border-blue-500 focus:outline-none px-2 py-1 w-32 sm:w-auto"
               placeholder="Enter customer name"
             />
           ) : (
             <button
               onClick={() => setIsEditingCustomer(true)}
-              className="text-sm font-medium text-gray-800 hover:text-blue-600 transition-colors px-2 py-1 rounded hover:bg-blue-50"
+              className="text-xs sm:text-sm font-medium text-gray-800 hover:text-blue-600 transition-colors px-2 py-1 rounded hover:bg-blue-50"
             >
               {customerName || "Voice Customer"}
               <svg className="inline-block w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -559,20 +547,20 @@ function QuotationDisplay() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-gray-200">
+      <div className="overflow-x-auto rounded-lg border border-gray-200">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Item
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 sm:px-6 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Qty
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 sm:px-6 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Rate
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 sm:px-6 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Subtotal
               </th>
             </tr>
@@ -580,16 +568,16 @@ function QuotationDisplay() {
           <tbody className="bg-white divide-y divide-gray-200">
             {quotation.items.map((item, index) => (
               <tr key={index} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                <td className="px-3 sm:px-6 py-2 sm:py-4 text-xs sm:text-sm font-medium text-gray-900">
                   {item.name}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-right">
+                <td className="px-3 sm:px-6 py-2 sm:py-4 text-xs sm:text-sm text-gray-600 text-right">
                   {item.qty}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-right">
+                <td className="px-3 sm:px-6 py-2 sm:py-4 text-xs sm:text-sm text-gray-600 text-right">
                   ₹{item.rate.toFixed(2)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
+                <td className="px-3 sm:px-6 py-2 sm:py-4 text-xs sm:text-sm text-gray-900 text-right font-medium">
                   ₹{item.subtotal.toFixed(2)}
                 </td>
               </tr>
@@ -599,12 +587,12 @@ function QuotationDisplay() {
             <tr className="bg-gradient-to-r from-blue-50 to-indigo-50">
               <td
                 colSpan={3}
-                className="px-6 py-4 text-right text-sm font-semibold text-gray-900"
+                className="px-3 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold text-gray-900"
               >
                 Total Amount:
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-right">
-                <span className="text-lg font-bold text-blue-600">
+              <td className="px-3 sm:px-6 py-3 sm:py-4 text-right">
+                <span className="text-base sm:text-lg font-bold text-blue-600">
                   ₹{quotation.total.toFixed(2)}
                 </span>
               </td>
@@ -630,6 +618,7 @@ function VoiceAssistantComponent({
   setIsPaused,
   onStateChange,
   onEndCall,
+  agentState,
 }: {
   isMuted: boolean;
   setIsMuted: React.Dispatch<React.SetStateAction<boolean>>;
@@ -637,6 +626,7 @@ function VoiceAssistantComponent({
   setIsPaused: React.Dispatch<React.SetStateAction<boolean>>;
   onStateChange: (state: AgentState) => void;
   onEndCall: () => void;
+  agentState: AgentState;
 }) {
   const assistant = useVoiceAssistant();
   const { localParticipant } = useLocalParticipant();
@@ -703,69 +693,46 @@ function VoiceAssistantComponent({
     setIsPaused((prev) => !prev);
   };
 
-  // Main Gemini-style UI
+  // Main UI with white background and centered controls
   return (
-    <div className="relative min-h-[600px] flex flex-col justify-between items-center w-full h-[100vh] bg-gradient-to-br from-[#181c24] via-[#23272f] to-[#10131a] overflow-hidden" style={{backdropFilter:'blur(8px)'}}>
-      {/* Top bar: Live indicator */}
-      <div className="absolute top-0 left-0 w-full flex items-center justify-center pt-6 z-10">
-        <div className="flex items-center gap-2 bg-black/60 px-4 py-2 rounded-full backdrop-blur-md">
-          <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="#2563eb" fillOpacity="0.2" />
-            <circle cx="12" cy="12" r="5" fill="#2563eb" />
-          </svg>
-          <span className="text-blue-100 font-semibold text-lg tracking-wide">Live</span>
-        </div>
-      </div>
-
-      {/* Center: (optional) Visualizer or empty space */}
-      <div className="flex-1 flex flex-col items-center justify-center w-full">
-        {/* Subtle blue glow and noise overlay */}
-        <div className="absolute bottom-0 left-0 w-full h-1/3 pointer-events-none" style={{background: 'radial-gradient(ellipse at bottom, #2563eb55 0%, transparent 70%)'}} />
-        <div className="absolute inset-0 pointer-events-none" style={{background: 'url("data:image/svg+xml,%3Csvg width=\'40\' height=\'40\' viewBox=\'0 0 40 40\' fill=\'none\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Crect width=\'40\' height=\'40\' fill=\'%231a1d23\'/%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'1.5\' fill=\'%2323272f\'/%3E%3C/svg%3E")', opacity: 0.08}} />
-      </div>
-
-      {/* Bottom: Gemini-style floating control bar */}
-      <div className="relative z-10 w-full flex items-center justify-center pb-10">
-        <div className="flex gap-8 px-8 py-4 rounded-2xl bg-black/60 backdrop-blur-md shadow-none border-none">
+    <div className="relative flex flex-col justify-center items-center w-full">
+      {/* Control bar centered */}
+      <div className="relative z-10 w-full flex items-center justify-center">
+        <div className="flex gap-4 sm:gap-8 px-4 sm:px-8 py-3 sm:py-4 rounded-2xl bg-white shadow-xl border border-gray-200">
           {/* Mute button */}
           <button
             onClick={handleMute}
-            className={`w-20 h-20 rounded-full flex items-center justify-center transition-colors duration-150 ${isMuted ? 'bg-neutral-700' : 'bg-black'} border-4 border-black dark:border-white/10 shadow-lg active:scale-95 focus:outline-none focus:ring-4 focus:ring-blue-500/30`}
+            className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center transition-colors duration-150 ${isMuted ? 'bg-red-500' : 'bg-blue-500'} shadow-lg active:scale-95 focus:outline-none focus:ring-4 focus:ring-blue-500/30 hover:opacity-90`}
             aria-label={isMuted ? 'Unmute microphone' : 'Mute microphone'}
           >
-            <svg className="w-11 h-11 text-white" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
-              <rect x="9" y="4" width="6" height="12" rx="3" />
-              {isMuted && (
-                <line x1="6" y1="6" x2="18" y2="18" stroke="red" strokeWidth="2.5" strokeLinecap="round" />
-              )}
-            </svg>
+            {isMuted ? (
+              <MicOff className="w-8 h-8 sm:w-11 sm:h-11 text-white" />
+            ) : (
+              <Mic className="w-8 h-8 sm:w-11 sm:h-11 text-white" />
+            )}
           </button>
           {/* Pause/Resume button (replaces video) */}
           <button
             onClick={handlePauseResume}
-            className="w-20 h-20 rounded-full flex items-center justify-center transition-colors duration-150 bg-black border-4 border-black dark:border-white/10 shadow-lg active:scale-95 focus:outline-none focus:ring-4 focus:ring-blue-500/30"
+            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center transition-colors duration-150 bg-gray-700 shadow-lg active:scale-95 focus:outline-none focus:ring-4 focus:ring-gray-500/30 hover:opacity-90"
             aria-label={isPaused ? 'Resume audio' : 'Pause audio'}
           >
             {isPaused ? (
               // Play icon (bold, white)
-              <svg className="w-11 h-11 text-white" fill="white" viewBox="0 0 24 24">
+              <svg className="w-8 h-8 sm:w-11 sm:h-11 text-white" fill="white" viewBox="0 0 24 24">
                 <polygon points="8,5 20,12 8,19" />
               </svg>
             ) : (
               // Pause icon (bold, white)
-              <svg className="w-11 h-11 text-white" fill="white" viewBox="0 0 24 24">
+              <svg className="w-8 h-8 sm:w-11 sm:h-11 text-white" fill="white" viewBox="0 0 24 24">
                 <rect x="7" y="5" width="3.5" height="14" rx="1.5" />
                 <rect x="13.5" y="5" width="3.5" height="14" rx="1.5" />
               </svg>
             )}
           </button>
           {/* End call button */}
-          <button onClick={handleEndCall} className="w-20 h-20 rounded-full flex items-center justify-center transition-colors duration-150 bg-black border-4 border-black dark:border-white/10 shadow-lg active:scale-95 focus:outline-none focus:ring-4 focus:ring-red-500/30" aria-label="End call">
-            <svg className="w-11 h-11 text-white" fill="white" viewBox="0 0 24 24">
-              <path d="M5 15c5-4 9-4 14 0" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-              <rect x="3" y="15" width="4" height="3" rx="1" fill="white" />
-              <rect x="17" y="15" width="4" height="3" rx="1" fill="white" />
-            </svg>
+          <button onClick={handleEndCall} className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center transition-colors duration-150 bg-red-500 shadow-lg active:scale-95 focus:outline-none focus:ring-4 focus:ring-red-500/30 hover:opacity-90" aria-label="End call">
+            <PhoneOff className="w-8 h-8 sm:w-11 sm:h-11 text-white" />
           </button>
         </div>
       </div>
@@ -932,31 +899,117 @@ function RoomContent({
   onStateChange?: (state: AgentState) => void;
   onDisconnect?: () => void;
 }) {
-  // Fullscreen Gemini-style layout
+  const [agentState, setAgentState] = useState<AgentState>(AgentState.CONNECTED);
+
+  const handleStateChange = (state: AgentState) => {
+    setAgentState(state);
+    if (onStateChange) onStateChange(state);
+  };
+
+  // Determine indicator appearance based on state
+  const getIndicatorConfig = () => {
+    if (isPaused) {
+      return {
+        bgColor: 'bg-yellow-500',
+        text: 'Paused',
+        pulseColor: 'bg-yellow-300',
+        animate: false
+      };
+    }
+    if (isMuted) {
+      return {
+        bgColor: 'bg-red-500',
+        text: 'Muted',
+        pulseColor: 'bg-red-300',
+        animate: false
+      };
+    }
+    switch (agentState) {
+      case AgentState.LISTENING:
+        return {
+          bgColor: 'bg-green-500',
+          text: 'Listening',
+          pulseColor: 'bg-green-300',
+          animate: true
+        };
+      case AgentState.THINKING:
+        return {
+          bgColor: 'bg-purple-500',
+          text: 'Processing',
+          pulseColor: 'bg-purple-300',
+          animate: true
+        };
+      case AgentState.SPEAKING:
+        return {
+          bgColor: 'bg-blue-500',
+          text: 'Speaking',
+          pulseColor: 'bg-blue-300',
+          animate: true
+        };
+      case AgentState.CONNECTING:
+        return {
+          bgColor: 'bg-gray-500',
+          text: 'Connecting',
+          pulseColor: 'bg-gray-300',
+          animate: true
+        };
+      case AgentState.DISCONNECTED:
+        return {
+          bgColor: 'bg-gray-500',
+          text: 'Disconnected',
+          pulseColor: 'bg-gray-300',
+          animate: false
+        };
+      default:
+        return {
+          bgColor: 'bg-blue-500',
+          text: 'Connected',
+          pulseColor: 'bg-blue-300',
+          animate: false
+        };
+    }
+  };
+
+  const indicator = getIndicatorConfig();
+
+  // Centered layout with white background
   return (
     <div
-      className="w-screen h-screen min-h-0 min-w-0 flex flex-col items-center justify-center bg-black overflow-hidden"
+      className="w-screen h-screen min-h-0 min-w-0 flex flex-col items-center justify-between bg-white overflow-auto"
       style={{ width: '100vw', height: '100vh' }}
     >
-      <div className="flex flex-col md:flex-row w-full h-full overflow-visible md:overflow-auto">
-        {/* Quotation always visible, stacked on mobile, left on desktop */}
-        <div className="w-full md:w-1/2 flex-shrink-0 flex items-center justify-center min-w-0 min-h-0 bg-transparent p-2 md:p-0 z-10 relative md:static" style={{maxHeight: 'none'}}>
-          <QuotationDisplay />
-        </div>
-        {/* Assistant below for mobile, right for desktop */}
-        <div className="w-full md:w-1/2 flex flex-col items-end justify-end min-w-0 min-h-0 bg-transparent p-2 md:p-0 z-10 relative md:static" style={{flex: 1}}>
-          <div className="w-full flex flex-col items-center justify-end">
-            <VoiceAssistantComponent
-              isMuted={isMuted}
-              setIsMuted={setIsMuted}
-              isPaused={isPaused}
-              setIsPaused={setIsPaused}
-              onStateChange={onStateChange || (() => {})}
-              onEndCall={onDisconnect || (() => {})}
-            />
-            <RoomAudioRenderer />
+      <div className="flex flex-col w-full items-center gap-4 sm:gap-8 py-4 sm:py-8 px-3 sm:px-4">
+        {/* Live indicator at top with dynamic state */}
+        <div className="flex items-center justify-center pt-2">
+          <div className={`flex items-center gap-2 ${indicator.bgColor} px-4 sm:px-6 py-2 sm:py-2.5 rounded-full shadow-md transition-all duration-300`}>
+            <div className="relative w-4 h-4 sm:w-5 sm:h-5">
+              {indicator.animate && (
+                <span className={`absolute inline-flex h-full w-full rounded-full ${indicator.pulseColor} opacity-75 animate-ping`}></span>
+              )}
+              <span className={`relative inline-flex rounded-full h-4 w-4 sm:h-5 sm:w-5 bg-white`}></span>
+            </div>
+            <span className="text-white font-semibold text-sm sm:text-lg tracking-wide">{indicator.text}</span>
           </div>
         </div>
+        
+        {/* Quotation centered in middle */}
+        <div className="w-full max-w-4xl flex items-center justify-center">
+          <QuotationDisplay />
+        </div>
+      </div>
+      
+      {/* Assistant controls at bottom - fixed */}
+      <div className="w-full flex flex-col items-center pb-4 sm:pb-8">
+        <VoiceAssistantComponent
+          isMuted={isMuted}
+          setIsMuted={setIsMuted}
+          isPaused={isPaused}
+          setIsPaused={setIsPaused}
+          onStateChange={handleStateChange}
+          onEndCall={onDisconnect || (() => {})}
+          agentState={agentState}
+        />
+        <RoomAudioRenderer />
       </div>
     </div>
   );
