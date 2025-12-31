@@ -44,7 +44,7 @@ interface Quotation {
 }
 
 // Quotation Display Component
-function QuotationDisplay() {
+function QuotationDisplay({ isMuted }: { isMuted: boolean }) {
   const [quotation, setQuotation] = useState<Quotation | null>(null);
   const [customerName, setCustomerName] = useState<string>("");
   const [isEditingCustomer, setIsEditingCustomer] = useState(false);
@@ -1165,7 +1165,7 @@ function RoomContent({
         
         {/* Quotation centered in middle */}
         <div className="w-full max-w-4xl flex items-center justify-center">
-          <QuotationDisplay />
+          <QuotationDisplay isMuted={isMuted} />
         </div>
       </div>
       
