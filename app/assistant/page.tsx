@@ -372,6 +372,64 @@ function QuotationDisplay() {
     ) as (() => void) | undefined;
     console.log("saveQuotation RPC method registered");
 
+    // RPC Handler for conversation logging
+    const handleConversationLogRPC = async (data: any) => {
+      try {
+        console.log("📝 logConversation RPC received");
+        
+        const request = JSON.parse(data.payload);
+        
+        if (request.type === "conversation_log") {
+          const logData = request.data;
+          
+          // Call API to store conversation log
+          const response = await fetch("/api/conversation-logs", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(logData),
+          });
+          
+          const result = await response.json();
+          
+          if (result.status === "success") {
+            console.log(`✅ Conversation log stored: [${logData.speaker}] ${logData.text.substring(0, 50)}...`);
+            return JSON.stringify({
+              status: "success",
+              log_id: result.log_id,
+            });
+          } else {
+            console.error("Failed to store conversation log:", result.message);
+            return JSON.stringify({
+              status: "error",
+              message: result.message,
+            });
+          }
+        }
+        
+        return JSON.stringify({ 
+          status: "error", 
+          message: "Invalid request type" 
+        });
+        
+      } catch (err) {
+        console.error("Error handling logConversation RPC:", err);
+        return JSON.stringify({
+          status: "error",
+          message: `Failed to log conversation: ${err}`,
+        });
+      }
+    };
+
+    // Register logConversation RPC method
+    console.log("Registering RPC method: logConversation");
+    const unregisterLog = room.localParticipant.registerRpcMethod(
+      "logConversation",
+      handleConversationLogRPC
+    ) as (() => void) | undefined;
+    console.log("logConversation RPC method registered");
+
     // Data Channel Handler (fallback)
     const handleDataReceived = (
       payload: Uint8Array,
@@ -450,6 +508,9 @@ function QuotationDisplay() {
       }
       if (typeof unregisterSave === 'function') {
         unregisterSave();
+      }
+      if (typeof unregisterLog === 'function') {
+        unregisterLog();
       }
       room.localParticipant?.off("dataReceived", handleDataReceived);
       document.removeEventListener('click', handleUserInteraction);
