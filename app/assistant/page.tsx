@@ -380,23 +380,42 @@ function QuotationDisplay() {
       topic?: string
     ) => {
       try {
+        // If the message is a LiveKit transcription stream, handle/drop based on mute state
+        if (topic === "lk.transcription") {
+          const decoder = new TextDecoder();
+          const text = decoder.decode(payload || new Uint8Array());
+          if (isMuted) {
+            console.log("Dropping incoming transcription because local user is muted");
+            return;
+          }
+          console.log("Incoming transcription:", text);
+          // Optionally forward transcription to assistant or process it here
+          return;
+        }
+
         console.log("Data channel message received from:", participant?.identity);
         console.log("Payload size:", payload.byteLength, "bytes");
-        
+
         const decoder = new TextDecoder();
         const dataStr = decoder.decode(payload);
         console.log("Decoded data:", dataStr);
-        
-        const response = JSON.parse(dataStr);
+
+        let response;
+        try {
+          response = JSON.parse(dataStr);
+        } catch (err) {
+          console.warn("Data channel payload is not JSON, ignoring:", dataStr);
+          return;
+        }
         console.log("Parsed response:", response);
-        
+
         if (response.type === "quotation_update") {
           console.log("Processing quotation update via data channel");
-          
+
           if (response.data) {
             const newQuotation = response.data;
             console.log("New quotation:", newQuotation);
-            
+
             if (newQuotation.items?.length > 0 || newQuotation.customer) {
               setQuotation(newQuotation);
               setCustomerName(newQuotation.customer || "Voice Customer");
@@ -630,24 +649,176 @@ function VoiceAssistantComponent({
 }) {
   const assistant = useVoiceAssistant();
   const { localParticipant } = useLocalParticipant();
+  // Refs to manage silent replacement tracks and originals
+  const silentTrackRef = useRef<MediaStreamTrack | null>(null);
+  const originalTracksRef = useRef<Map<string, { track: any; wasUnpublished?: boolean }>>(new Map());
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
-  // Mute mic only (track.enabled)
-  const handleMute = async () => {
-    setIsMuted((prev) => {
-      const next = !prev;
-      // Find the local audio track and set enabled
-      if (localParticipant) {
-        localParticipant.getTrackPublications()
-          .filter((pub) => pub.kind === 'audio' && pub.track)
-          .forEach((pub) => {
-            if (pub.track && 'enabled' in pub.track) {
-              (pub.track as any).enabled = !next;
-            }
-          });
-      }
-      return next;
-    });
+  const createSilentTrack = (): MediaStreamTrack | null => {
+    if (silentTrackRef.current) return silentTrackRef.current;
+    try {
+      const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return null;
+      const ctx = new AudioCtx();
+      audioCtxRef.current = ctx;
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+      gain.gain.value = 0; // silence
+      oscillator.connect(gain);
+      const dst = ctx.createMediaStreamDestination();
+      gain.connect(dst);
+      oscillator.start();
+      const track = dst.stream.getAudioTracks()[0];
+      silentTrackRef.current = track;
+      return track;
+    } catch (e) {
+      console.warn('Failed to create silent track:', e);
+      return null;
+    }
   };
+
+  const handleMute = async () => {
+    const next = !isMuted;
+
+    try {
+      if (localParticipant) {
+        const pubs = localParticipant.getTrackPublications().filter((p: any) => p.kind === 'audio');
+        for (let i = 0; i < pubs.length; i++) {
+          const pub = pubs[i] as any;
+          const sender = pub?.sender || (pub as any).rtpSender || null;
+          const pubId = pub.trackSid || pub.sid || (pub.track && pub.track.id) || `audio-${i}`;
+
+          if (next) {
+            // MUTING: store original and replace with silent track when possible
+            try {
+              const original = (pub.track && (pub.track.mediaStreamTrack || pub.track)) || null;
+              if (original) originalTracksRef.current.set(pubId, { track: original, wasUnpublished: false });
+
+              let replaced = false;
+              if (sender && typeof sender.replaceTrack === 'function') {
+                const silent = createSilentTrack();
+                if (silent) {
+                  try {
+                    await sender.replaceTrack(silent);
+                    replaced = true;
+                  } catch (e) {
+                    console.warn('replaceTrack failed:', e);
+                    replaced = false;
+                  }
+                }
+              }
+
+              if (!replaced) {
+                // Try to unpublish the track as a stronger fallback
+                if (original && typeof (localParticipant as any).unpublishTrack === 'function') {
+                  try {
+                    await (localParticipant as any).unpublishTrack(original);
+                    const rec = originalTracksRef.current.get(pubId);
+                    if (rec) rec.wasUnpublished = true;
+                    replaced = true;
+                  } catch (e) {
+                    console.warn('unpublishTrack failed:', e);
+                  }
+                }
+              }
+
+              if (!replaced) {
+                if (original && 'enabled' in original) {
+                  original.enabled = false;
+                  replaced = true;
+                }
+              }
+
+              if (!replaced && pub.setMuted && typeof pub.setMuted === 'function') {
+                try {
+                  pub.setMuted(true);
+                } catch (e) {
+                  console.warn('pub.setMuted failed:', e);
+                }
+              }
+            } catch (err) {
+              console.warn('Failed to mute publication:', err);
+            }
+          } else {
+            // UNMUTING: restore original track if we replaced it
+            try {
+              const stored = originalTracksRef.current.get(pubId);
+              if (stored) {
+                const original = stored.track;
+                let restored = false;
+                if (sender && typeof sender.replaceTrack === 'function' && original) {
+                  try {
+                    await sender.replaceTrack(original);
+                    restored = true;
+                  } catch (e) {
+                    console.warn('replaceTrack restore failed:', e);
+                    restored = false;
+                  }
+                }
+
+                if (!restored && stored.wasUnpublished && original && typeof (localParticipant as any).publishTrack === 'function') {
+                  try {
+                    await (localParticipant as any).publishTrack(original);
+                    restored = true;
+                  } catch (e) {
+                    console.warn('publishTrack failed:', e);
+                  }
+                }
+
+                if (!restored && original && 'enabled' in original) {
+                  original.enabled = true;
+                  restored = true;
+                }
+
+                if (!restored && pub.setMuted && typeof pub.setMuted === 'function') {
+                  try { pub.setMuted(false); } catch (e) { console.warn('pub.setMuted(false) failed:', e); }
+                }
+
+                originalTracksRef.current.delete(pubId);
+              }
+            } catch (err) {
+              console.warn('Failed to unmute publication:', err);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Error muting/unmuting tracks:', err);
+    }
+
+    // Ensure assistant stops/resumes listening so agent won't receive audio/transcripts
+    try {
+      if (assistant) {
+        if (next && typeof (assistant as any).stopListening === 'function') {
+          try { (assistant as any).stopListening(); } catch (e) { console.warn('assistant.stopListening failed:', e); }
+        } else if (!next && typeof (assistant as any).resumeListening === 'function') {
+          try { (assistant as any).resumeListening(); } catch (e) { console.warn('assistant.resumeListening failed:', e); }
+        }
+      }
+    } catch (err) {
+      console.warn('Assistant stop/resume error:', err);
+    }
+
+    setIsMuted(next);
+  };
+
+  // Cleanup silent track and audio context on unmount
+  useEffect(() => {
+    return () => {
+      try {
+        if (silentTrackRef.current) {
+          try { silentTrackRef.current.stop(); } catch (e) {}
+          silentTrackRef.current = null;
+        }
+        if (audioCtxRef.current) {
+          try { audioCtxRef.current.close(); } catch (e) {}
+          audioCtxRef.current = null;
+        }
+      } catch (e) {
+        console.warn('Error cleaning up silent track/audio context:', e);
+      }
+    };
+  }, []);
 
   // Pause/Resume: disables mic and agent listening
   const handlePauseResume = () => {
