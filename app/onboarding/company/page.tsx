@@ -36,6 +36,10 @@ export default function CompanyDetailsPage() {
   // Tax (optional - only GST)
   const [gst, setGst] = useState("")
 
+  // Quotation Numbering (optional)
+  const [quotationStartNumber, setQuotationStartNumber] = useState("")
+  const [quotationPrefix, setQuotationPrefix] = useState("QT-")
+
   useEffect(() => {
     const checkAuth = async () => {
       const supabase = getSupabaseBrowserClient()
@@ -164,6 +168,11 @@ export default function CompanyDetailsPage() {
         },
         tax: {
           gst,
+        },
+        quotationNumbering: {
+          prefix: quotationPrefix || "QT-",
+          startNumber: quotationStartNumber ? parseInt(quotationStartNumber) : 1,
+          currentNumber: quotationStartNumber ? parseInt(quotationStartNumber) : 1,
         },
       }
 
@@ -405,6 +414,61 @@ export default function CompanyDetailsPage() {
                     className="text-sm"
                   />
                 </div>
+              </div>
+
+              {/* Quotation Numbering */}
+              <div className="border-t pt-4 space-y-4">
+                <div>
+                  <h3 className="text-sm font-semibold mb-1">Quotation Numbering (Optional)</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Configure how your quotations are numbered. Leave blank to start from 1.
+                  </p>
+                </div>
+                
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="quotationPrefix" className="text-sm">
+                      Quotation Prefix
+                    </Label>
+                    <Input
+                      id="quotationPrefix"
+                      value={quotationPrefix}
+                      onChange={(e) => setQuotationPrefix(e.target.value)}
+                      placeholder="QT-"
+                      className="text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      E.g., "QT-" will generate QT-1001, QT-1002, etc.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="quotationStartNumber" className="text-sm">
+                      Starting Number
+                    </Label>
+                    <Input
+                      id="quotationStartNumber"
+                      type="number"
+                      value={quotationStartNumber}
+                      onChange={(e) => setQuotationStartNumber(e.target.value)}
+                      placeholder="1"
+                      min="1"
+                      className="text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Start numbering from this number (e.g., 1001)
+                    </p>
+                  </div>
+                </div>
+
+                {quotationPrefix && quotationStartNumber && (
+                  <div className="bg-muted/50 rounded-lg p-3 border border-muted">
+                    <p className="text-xs text-muted-foreground mb-1">Preview:</p>
+                    <p className="text-sm font-medium">
+                      {quotationPrefix}{quotationStartNumber}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Actions */}

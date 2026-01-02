@@ -67,6 +67,48 @@ export async function POST(request: NextRequest) {
 
     console.log("Found template_id:", templateData.id);
 
+    // Get organization data to retrieve quotation numbering settings
+    const { data: orgData, error: orgError } = await supabase
+      .from("organizations")
+      .select("org_data")
+      .eq("id", orgUserData.organization_id)
+      .single();
+
+    if (orgError) {
+      console.error("Error fetching organization data:", orgError);
+      return NextResponse.json(
+        { status: "error", message: "Failed to fetch organization data" },
+        { status: 500 }
+      );
+    }
+
+    // Generate quotation number
+    const quotationNumbering = orgData?.org_data?.quotationNumbering || {};
+    const prefix = quotationNumbering.prefix || "QT-";
+    const currentNumber = quotationNumbering.currentNumber || quotationNumbering.startNumber || 1;
+    const quotationNumber = `${prefix}${currentNumber}`;
+
+    console.log("Generated quotation number:", quotationNumber);
+
+    // Update the current number for next quotation
+    const updatedOrgData = {
+      ...orgData.org_data,
+      quotationNumbering: {
+        ...quotationNumbering,
+        currentNumber: currentNumber + 1,
+      },
+    };
+
+    const { error: updateOrgError } = await supabase
+      .from("organizations")
+      .update({ org_data: updatedOrgData })
+      .eq("id", orgUserData.organization_id);
+
+    if (updateOrgError) {
+      console.warn("Failed to update quotation number counter:", updateOrgError);
+      // Don't fail the request, just log the warning
+    }
+
     // Insert quotation into database - store entire data object in quotation_data field
     const { data: quotationRecord, error: insertError } = await supabase
       .from("quotations")
@@ -75,6 +117,7 @@ export async function POST(request: NextRequest) {
         organization_id: orgUserData.organization_id,
         template_id: templateData.id,
         quotation_data: body, // Store the entire data object
+        quote_number: quotationNumber, // Add the generated quotation number
       })
       .select("id")
       .single();
@@ -93,6 +136,7 @@ export async function POST(request: NextRequest) {
       status: "success",
       message: "Quotation saved successfully",
       quotation_id: quotationRecord.id,
+      quotation_number: quotationNumber,
       total_amount: body.total_amount || 0,
     });
 
