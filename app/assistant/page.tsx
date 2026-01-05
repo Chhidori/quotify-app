@@ -175,13 +175,20 @@ function QuotationDisplay({ isMuted }: { isMuted: boolean }) {
         };
 
         rec.onerror = (err: any) => {
+          const code = err?.error || err?.type || "";
+          
+          // "aborted" is expected when recognition is stopped during cleanup/navigation
+          if (code === "aborted") {
+            console.log("SpeechRecognition aborted (expected during cleanup)");
+            return;
+          }
+          
           // log useful properties — SpeechRecognitionErrorEvent may be non-enumerable
           console.error("SpeechRecognition error:", {
             event: err,
-            code: err?.error || err?.type,
+            code: code,
             message: err?.message,
           });
-           const code = err?.error || err?.type || "";
            // common recoverable error: no-speech -> retry a few times
            if (code === "no-speech" || code === "no-speecherror") {
              if (recognitionRetryRef.current < MAX_RETRIES) {
